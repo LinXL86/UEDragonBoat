@@ -234,9 +234,17 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI Skill System")
 	float AISkillIntervalMax;
 
-	// AI可释放的技能列表（包含所有技能类型）
+	// AI是否每局随机技能（启用后AI技能会在每次比赛开始时重新随机）
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI Skill System")
-	TArray<ESkillType> AIAvailableSkills;
+	bool bRandomizeAISkillsEachRace;
+
+	// AI1 装备的技能（2个槽位）
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI Skill System")
+	TArray<ESkillType> AI1_EquippedSkills;
+
+	// AI2 装备的技能（2个槽位）
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI Skill System")
+	TArray<ESkillType> AI2_EquippedSkills;
 
 	// AI技能目标类型映射（用于判断技能是增益还是减益）
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI Skill System")
@@ -301,6 +309,16 @@ public:
 	// 获取指定槽位装备的技能类型
 	UFUNCTION(BlueprintPure, Category = "Skill System")
 	ESkillType GetEquippedSkill(int32 SlotIndex) const;
+
+	// UI调用：设置指定槽位的技能
+	UFUNCTION(BlueprintCallable, Category = "Skill System")
+	void SetEquippedSkill(int32 SlotIndex, ESkillType NewSkill);
+
+	// ========== AI技能系统接口 ==========
+
+	// GameMode调用：启动AI技能系统（比赛开始后调用）
+	UFUNCTION(BlueprintCallable, Category = "AI Skill System")
+	void StartAISkillSystem();
 
 	// ========== 测试函数（仅用于调试）==========
 
@@ -431,6 +449,9 @@ private:
 
 	// 获取技能的目标类型
 	ESkillTargetType GetSkillTargetType(ESkillType SkillType) const;
+
+	// 随机配置AI技能（当启用每局随机时调用）
+	void RandomizeAISkills();
 	
 	// 待交换的索引
 	int32 PendingSwapIndexA;

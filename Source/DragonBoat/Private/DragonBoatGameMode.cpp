@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "DragonBoatGameMode.h"
+#include "Datamanagement.h"
 #include "TimerManager.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -95,6 +96,19 @@ void ADragonBoatGameMode::StartRace()
 	UE_LOG(LogTemp, Log, TEXT("StartRace: Race started!"));
 
 	OnRaceStarted();
+
+	// 初始化数据管理器，并启动AI技能系统
+	ADatamanagement* DataMgmt = Cast<ADatamanagement>(
+		UGameplayStatics::GetActorOfClass(GetWorld(), ADatamanagement::StaticClass()));
+	if (DataMgmt)
+	{
+		DataMgmt->StartAISkillSystem();
+		UE_LOG(LogTemp, Log, TEXT("StartRace: AI Skill System activated"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("StartRace: Datamanagement not found! AI skills will not work."));
+	}
 
 	// 启动进度更新Timer
 	GetWorld()->GetTimerManager().SetTimer(
