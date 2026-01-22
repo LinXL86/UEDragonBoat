@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
+#include "Datamanagement.h"  // 需要引用完整定义以使用 ESlotEffectType
 #include "DragonBoatGameMode.generated.h"
 
 // 游戏状态枚举
@@ -15,6 +16,43 @@ enum class ERaceGameState : uint8
 	Paused		UMETA(DisplayName = "Paused"),			// 暂停
 	Finished	UMETA(DisplayName = "Finished"),		// 比赛结束
 	PostRace	UMETA(DisplayName = "Post-Race")		// 结算阶段
+};
+
+// 难度等级枚举
+UENUM(BlueprintType)
+enum class EDifficultyLevel : uint8
+{
+	Easy		UMETA(DisplayName = "Easy"),
+	Normal		UMETA(DisplayName = "Normal"),
+	Hard		UMETA(DisplayName = "Hard"),
+	Insane		UMETA(DisplayName = "Insane"),
+	Hell		UMETA(DisplayName = "Hell")
+};
+
+// 难度配置数据
+USTRUCT(BlueprintType)
+struct FDifficultyConfig
+{
+	GENERATED_BODY()
+
+	// AI 技能释放间隔
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI Behavior")
+	float AISkillIntervalMin;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI Behavior")
+	float AISkillIntervalMax;
+
+	// 特殊格子配置
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Special Areas")
+	TArray<int32> SpecialAreaIndices;  // 特殊格子的索引列表
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Special Areas")
+	TArray<ESlotEffectType> SpecialAreaTypes;  // 对应的效果类型
+
+	FDifficultyConfig()
+		: AISkillIntervalMin(10.0f)
+		, AISkillIntervalMax(20.0f)
+	{}
 };
 
 // 最终结果（蓝图可用）
@@ -99,6 +137,16 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "Race State")
 	int32 FinishedBoatCount;  // 已完成的龙舟数量
 
+	// ========== 难度系统 ==========
+
+	// 当前难度等级
+	UPROPERTY(BlueprintReadOnly, Category = "Difficulty")
+	EDifficultyLevel CurrentDifficulty;
+
+	// 难度配置表（在编辑器中配置）
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Difficulty")
+	TMap<EDifficultyLevel, FDifficultyConfig> DifficultyConfigs;
+
 	// ========== 公共接口 ==========
 
 	UFUNCTION(BlueprintCallable, Category = "Race Control")
@@ -120,6 +168,12 @@ public:
 	// 获取龙舟当前进度（0.0-1.0）
 	UFUNCTION(BlueprintPure, Category = "Race Query")
 	float GetBoatProgress(int32 BoatIndex) const;
+
+	// ========== 难度系统接口 ==========
+
+	// UI调用：设置游戏难度
+	UFUNCTION(BlueprintCallable, Category = "Difficulty")
+	void SetDifficulty(EDifficultyLevel Level);
 
 	// ========== 蓝图事件 ==========
 
@@ -148,6 +202,12 @@ public:
 	// [事件] 比赛结束
 	UFUNCTION(BlueprintImplementableEvent, Category = "Race Events")
 	void OnRaceFinished(const TArray<FBoatFinalResult>& FinalRankings);
+
+	// ========== 难度系统事件 ==========
+
+	// [事件] 难度变化通知（通知AI龙舟蓝图调整行为）
+	UFUNCTION(BlueprintImplementableEvent, Category = "Difficulty Events")
+	void OnDifficultyChanged(EDifficultyLevel NewDifficulty);
 
 private:
 	// 龙舟运行时数据（内部使用）
@@ -193,4 +253,12 @@ private:
 
 	// 结束比赛
 	void EndRace();
+
+	// ========== 难度系统内部函数 ==========
+
+	// 应用难度配置
+	void ApplyDifficultySettings();
+
+	// 初始化默认难度配置
+	void InitializeDefaultDifficultyConfigs();
 };

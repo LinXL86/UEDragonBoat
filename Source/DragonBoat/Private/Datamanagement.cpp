@@ -998,11 +998,9 @@ void ADatamanagement::SetEquippedSkill(int32 SlotIndex, ESkillType NewSkill)
 	if (EquippedSkills.IsValidIndex(SlotIndex))
 	{
 		EquippedSkills[SlotIndex] = NewSkill;
-		
 	}
 	else
 	{
-		
 	}
 }
 
@@ -1178,5 +1176,37 @@ void ADatamanagement::RandomizeAISkills()
 	AI2_EquippedSkills[1] = AI2_RandomSkills[AI2_Slot1_Index];
 
 	UE_LOG(LogTemp, Log, TEXT("RandomizeAISkills: AI skills randomized for this race!"));
+}
+
+// ========================================
+// 难度系统
+// ========================================
+
+void ADatamanagement::ApplySpecialAreas(const TArray<int32>& Indices, const TArray<ESlotEffectType>& Types)
+{
+	// 清空所有特殊格子
+	SpecialAreaGrid.Init(ESlotEffectType::None, GridSize * GridSize);
+
+	// 应用新配置
+	for (int32 i = 0; i < Indices.Num(); i++)
+	{
+		if (Types.IsValidIndex(i) && Indices[i] >= 0 && Indices[i] < SpecialAreaGrid.Num())
+		{
+			SpecialAreaGrid[Indices[i]] = Types[i];
+		}
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("ApplySpecialAreas: Applied %d special areas"), Indices.Num());
+
+	// 通知 UI 刷新特殊格子显示
+	OnSpecialAreasUpdated();
+}
+
+void ADatamanagement::SetAISkillInterval(float MinInterval, float MaxInterval)
+{
+	AISkillIntervalMin = MinInterval;
+	AISkillIntervalMax = MaxInterval;
+
+	UE_LOG(LogTemp, Log, TEXT("SetAISkillInterval: Set to %.1f-%.1f seconds"), MinInterval, MaxInterval);
 }
 

@@ -26,6 +26,12 @@ ADragonBoatGameMode::ADragonBoatGameMode()
 	PlayerBoat = nullptr;
 	AIBoat1 = nullptr;
 	AIBoat2 = nullptr;
+
+	// 难度系统初始化
+	CurrentDifficulty = EDifficultyLevel::Easy;  // 默认中等难度
+
+	// 初始化默认难度配置（可在编辑器中覆盖）
+	InitializeDefaultDifficultyConfigs();
 }
 
 void ADragonBoatGameMode::BeginPlay()
@@ -344,4 +350,157 @@ void ADragonBoatGameMode::EndRace()
 	});
 
 	OnRaceFinished(FinalRankings);
+}
+
+// ========================================
+// 难度系统
+// ========================================
+
+void ADragonBoatGameMode::SetDifficulty(EDifficultyLevel Level)
+{
+	CurrentDifficulty = Level;
+	UE_LOG(LogTemp, Log, TEXT("SetDifficulty: Difficulty set to %d"), (int32)Level);
+
+	// 应用难度配置
+	ApplyDifficultySettings();
+}
+
+void ADragonBoatGameMode::ApplyDifficultySettings()
+{
+	// 查找对应难度的配置
+	FDifficultyConfig* Config = DifficultyConfigs.Find(CurrentDifficulty);
+	if (!Config)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ApplyDifficultySettings: No config found for difficulty %d!"), (int32)CurrentDifficulty);
+		return;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("ApplyDifficultySettings: Applying difficulty %d"), (int32)CurrentDifficulty);
+	UE_LOG(LogTemp, Log, TEXT("  -> AI Skill Interval: %.1f-%.1f seconds"), Config->AISkillIntervalMin, Config->AISkillIntervalMax);
+	UE_LOG(LogTemp, Log, TEXT("  -> Special Areas: %d tiles"), Config->SpecialAreaIndices.Num());
+
+	// 1. 配置 Datamanagement
+	ADatamanagement* DataMgmt = Cast<ADatamanagement>(
+		UGameplayStatics::GetActorOfClass(GetWorld(), ADatamanagement::StaticClass()));
+	
+	if (DataMgmt)
+	{
+		// 应用特殊格子配置
+		DataMgmt->ApplySpecialAreas(Config->SpecialAreaIndices, Config->SpecialAreaTypes);
+
+		// 设置 AI 技能释放间隔
+		DataMgmt->SetAISkillInterval(Config->AISkillIntervalMin, Config->AISkillIntervalMax);
+
+		UE_LOG(LogTemp, Log, TEXT("ApplyDifficultySettings: Datamanagement configured successfully"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ApplyDifficultySettings: Datamanagement not found!"));
+	}
+
+	// 2. 通知 AI 龙舟蓝图（通过蓝图事件）
+	OnDifficultyChanged(CurrentDifficulty);
+}
+
+void ADragonBoatGameMode::InitializeDefaultDifficultyConfigs()
+{
+	// 难度 1 - 简单
+	FDifficultyConfig EasyConfig;
+	EasyConfig.AISkillIntervalMin = 15.0f;
+	EasyConfig.AISkillIntervalMax = 25.0f;
+	
+	EasyConfig.SpecialAreaIndices = {14,15,16,21,22,23,28,29,30,17,24,31,18,19,20,25,26,27,32,33,34};
+	EasyConfig.SpecialAreaTypes = {
+		ESlotEffectType::SpeedUpSelf,
+		ESlotEffectType::SpeedUpSelf,
+		ESlotEffectType::SpeedUpSelf,
+		ESlotEffectType::SpeedUpSelf,
+		ESlotEffectType::SpeedUpSelf,
+		ESlotEffectType::SpeedUpSelf,
+		ESlotEffectType::SpeedUpSelf,
+		ESlotEffectType::SpeedUpSelf,
+		ESlotEffectType::SpeedUpSelf,
+		ESlotEffectType::MoraleBoost, 
+		ESlotEffectType::MoraleBoost,  
+		ESlotEffectType::MoraleBoost,  
+		ESlotEffectType::SlowDownEnemy,  
+		ESlotEffectType::SlowDownEnemy,
+		ESlotEffectType::SlowDownEnemy,
+		ESlotEffectType::SlowDownEnemy,
+		ESlotEffectType::SlowDownEnemy,
+		ESlotEffectType::SlowDownEnemy,
+		ESlotEffectType::SlowDownEnemy,
+		ESlotEffectType::SlowDownEnemy,
+		ESlotEffectType::SlowDownEnemy,
+	};
+	DifficultyConfigs.Add(EDifficultyLevel::Easy, EasyConfig);
+
+	// 难度 2 - 中等
+	FDifficultyConfig NormalConfig;
+	NormalConfig.AISkillIntervalMin = 12.0f;
+	NormalConfig.AISkillIntervalMax = 20.0f;
+
+	EasyConfig.SpecialAreaIndices = {15,16,22,23,29,30,17,24,31,18,19,25,26,32,33};
+	EasyConfig.SpecialAreaTypes = {
+		ESlotEffectType::SpeedUpSelf,
+		ESlotEffectType::SpeedUpSelf,
+		ESlotEffectType::SpeedUpSelf,
+		ESlotEffectType::SpeedUpSelf,
+		ESlotEffectType::SpeedUpSelf,
+		ESlotEffectType::SpeedUpSelf,
+		ESlotEffectType::MoraleBoost,
+		ESlotEffectType::MoraleBoost,
+		ESlotEffectType::MoraleBoost,
+		ESlotEffectType::SlowDownEnemy,
+		ESlotEffectType::SlowDownEnemy,
+		ESlotEffectType::SlowDownEnemy,
+		ESlotEffectType::SlowDownEnemy,
+		ESlotEffectType::SlowDownEnemy,
+		ESlotEffectType::SlowDownEnemy,
+	};
+	DifficultyConfigs.Add(EDifficultyLevel::Normal, NormalConfig);
+
+	// 难度 3 - 困难
+	FDifficultyConfig HardConfig;
+	HardConfig.AISkillIntervalMin = 10.0f;
+	HardConfig.AISkillIntervalMax = 18.0f;
+
+	EasyConfig.SpecialAreaIndices = { 15,22,29,24,19,26,33 };
+	EasyConfig.SpecialAreaTypes = {
+		ESlotEffectType::SpeedUpSelf,
+		ESlotEffectType::SpeedUpSelf,
+		ESlotEffectType::SpeedUpSelf,
+		ESlotEffectType::MoraleBoost,
+		ESlotEffectType::SlowDownEnemy,
+		ESlotEffectType::SlowDownEnemy,
+		ESlotEffectType::SlowDownEnemy,
+
+	};
+	DifficultyConfigs.Add(EDifficultyLevel::Hard, HardConfig);
+
+	// 难度 4 - 变态
+	FDifficultyConfig InsaneConfig;
+	InsaneConfig.AISkillIntervalMin = 8.0f;
+	InsaneConfig.AISkillIntervalMax = 13.0f;
+
+	EasyConfig.SpecialAreaIndices = { 15,29,17,31,19,33 };
+	EasyConfig.SpecialAreaTypes = {
+		ESlotEffectType::SpeedUpSelf,
+		ESlotEffectType::SpeedUpSelf,
+		ESlotEffectType::MoraleBoost,
+		ESlotEffectType::SlowDownEnemy,
+		ESlotEffectType::SlowDownEnemy,
+	};
+	DifficultyConfigs.Add(EDifficultyLevel::Insane, InsaneConfig);
+
+	// 难度 5 - 地狱
+	FDifficultyConfig HellConfig;
+	HellConfig.AISkillIntervalMin = 5.0f;
+	HellConfig.AISkillIntervalMax = 10.0f;
+	// 0 个特殊格子
+	HellConfig.SpecialAreaIndices = {};
+	HellConfig.SpecialAreaTypes = {};
+	DifficultyConfigs.Add(EDifficultyLevel::Hell, HellConfig);
+
+	UE_LOG(LogTemp, Log, TEXT("InitializeDefaultDifficultyConfigs: Default difficulty configs initialized"));
 }

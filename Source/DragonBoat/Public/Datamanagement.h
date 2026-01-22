@@ -320,6 +320,16 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "AI Skill System")
 	void StartAISkillSystem();
 
+	// ========== 难度系统接口 ==========
+
+	// GameMode调用：应用特殊格子配置
+	UFUNCTION(BlueprintCallable, Category = "Difficulty")
+	void ApplySpecialAreas(const TArray<int32>& Indices, const TArray<ESlotEffectType>& Types);
+
+	// GameMode调用：设置AI技能释放间隔
+	UFUNCTION(BlueprintCallable, Category = "Difficulty")
+	void SetAISkillInterval(float MinInterval, float MaxInterval);
+
 	// ========== 测试函数（仅用于调试）==========
 
 	// 测试：直接设置士气值
@@ -397,6 +407,12 @@ public:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Skill Events")
 	void OnAISkillCasted(EAIBoatIndex CasterAI, ESkillType SkillType, ESkillTargetType TargetType, 
 		EAIBoatIndex TargetAI, bool bTargetIsPlayer, const FSkillConfig& Config);
+
+	// ========== 难度系统事件 ==========
+
+	// [事件] 特殊格子配置已更新（UI需要刷新特殊格子显示）
+	UFUNCTION(BlueprintImplementableEvent, Category = "Difficulty Events")
+	void OnSpecialAreasUpdated();
 
 private:
 	// 尝试交换两个方块
