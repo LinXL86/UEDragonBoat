@@ -29,8 +29,8 @@ ADatamanagement::ADatamanagement()
 
 	// 初始化技能配置
 	FSkillConfig EastWindConfig;
-	EastWindConfig.Duration = 8.0f;
-	EastWindConfig.EffectValue = 200.0f;  // 速度加成
+	EastWindConfig.Duration = 5.0f;
+	EastWindConfig.EffectValue = 250.0f;  // 速度加成
 	SkillConfigs.Add(ESkillType::EastWind, EastWindConfig);
 
 	FSkillConfig FloodConfig;
@@ -44,7 +44,7 @@ ADatamanagement::ADatamanagement()
 	SkillConfigs.Add(ESkillType::HeavyFog, FogConfig);
 
 	FSkillConfig ChainConfig;
-	ChainConfig.Duration = 6.0f;
+	ChainConfig.Duration = 5.0f;
 	ChainConfig.EffectValue = 4.0f;  // 锁定格子数量
 	SkillConfigs.Add(ESkillType::IronChain, ChainConfig);
 
@@ -58,13 +58,17 @@ ADatamanagement::ADatamanagement()
 	bEnableAISkills = true;  // 默认启用
 	AISkillIntervalMin = 10.0f;  // 最小10秒
 	AISkillIntervalMax = 20.0f;  // 最大20秒
+	bRandomizeAISkillsEachRace = false;  // 默认不随机，使用固定配置
 
-	// AI可以释放所有技能（模拟真实玩家行为）
-	AIAvailableSkills.Add(ESkillType::EastWind);    // 巧借东风（增益）
-	AIAvailableSkills.Add(ESkillType::FloodSeven);  // 水淹七军（减益）
-	AIAvailableSkills.Add(ESkillType::HeavyFog);    // 大雾（减益）
-	AIAvailableSkills.Add(ESkillType::IronChain);   // 铁索连环（减益）
-	AIAvailableSkills.Add(ESkillType::EmptyCity);   // 空城计（增益/防御）
+	// AI1 配置2个技能：
+	AI1_EquippedSkills.SetNum(2);
+	AI1_EquippedSkills[0] = ESkillType::EastWind;     // 槽位1：巧借东风
+	AI1_EquippedSkills[1] = ESkillType::FloodSeven;   // 槽位2：水淹七军
+
+	// AI2 配置2个技能：
+	AI2_EquippedSkills.SetNum(2);
+	AI2_EquippedSkills[0] = ESkillType::HeavyFog;     // 槽位1：大雾
+	AI2_EquippedSkills[1] = ESkillType::IronChain;    // 槽位2：铁索连环
 
 	// 初始化技能目标类型映射
 	SkillTargetTypeMap.Add(ESkillType::EastWind, ESkillTargetType::Self);      // 增益：给自己加速
@@ -79,11 +83,7 @@ void ADatamanagement::BeginPlay()
 	Super::BeginPlay();
 	InitializeGame();
 
-	// 启动AI技能系统
-	if (bEnableAISkills)
-	{
-		ScheduleNextAISkill();
-	}
+	// AI 技能系统启动由 GameMode 控制，在合适的时机调用 StartAISkillSystem()
 }
 
 void ADatamanagement::Tick(float DeltaTime)
@@ -851,7 +851,7 @@ void ADatamanagement::CheckMoraleToSkillPoint()
 		OnSkillPointChanged(SkillPoints, MaxSkillPoints);
 
 		// 再次通知UI士气值变化（显示重置后的值）
-		OnMoraleChanged(CurrentMorale, MaxMorale, 0);
+// 		OnMoraleChanged(CurrentMorale, MaxMorale, 0);
 		
 		// 如果技能点已满，强制清零士气值
 		if (SkillPoints >= MaxSkillPoints)
@@ -998,11 +998,9 @@ void ADatamanagement::SetEquippedSkill(int32 SlotIndex, ESkillType NewSkill)
 	if (EquippedSkills.IsValidIndex(SlotIndex))
 	{
 		EquippedSkills[SlotIndex] = NewSkill;
-		UE_LOG(LogTemp, Log, TEXT("SetEquippedSkill: 槽位 %d 更新为技能 %d"), SlotIndex, (int32)NewSkill);
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("SetEquippedSkill: 无效的槽位索引 %d (当前技能槽数量: %d)"), SlotIndex, EquippedSkills.Num());
 	}
 }
 
@@ -1010,22 +1008,49 @@ void ADatamanagement::SetEquippedSkill(int32 SlotIndex, ESkillType NewSkill)
 // AI技能系统
 // ========================================
 
-void ADatamanagement::TriggerAISkill()
+void ADatamanagement::StartAISkillSystem()
 {
-	// 检查是否有可用技能
-	if (AIAvailableSkills.Num() == 0)
+	if (!bEnableAISkills)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("TriggerAISkill: No AI skills available!"));
-		ScheduleNextAISkill();  // 继续调度下一次
+		UE_LOG(LogTemp, Warning, TEXT("StartAISkillSystem: AI skills are disabled!"));
 		return;
 	}
 
+	// 如果启用了每局随机技能，重新配置AI技能
+	if (bRandomizeAISkillsEachRace)
+	{
+		RandomizeAISkills();
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("StartAISkillSystem: Starting AI skill system..."));
+	UE_LOG(LogTemp, Log, TEXT("  -> AI1: Slot0=%d, Slot1=%d"), (int32)AI1_EquippedSkills[0], (int32)AI1_EquippedSkills[1]);
+	UE_LOG(LogTemp, Log, TEXT("  -> AI2: Slot0=%d, Slot1=%d"), (int32)AI2_EquippedSkills[0], (int32)AI2_EquippedSkills[1]);
+	
+	// 开始第一次 AI 技能释放
+	ScheduleNextAISkill();
+}
+
+void ADatamanagement::TriggerAISkill()
+{
 	// 随机选择一个施法AI（AI1 或 AI2）
 	EAIBoatIndex CasterAI = (FMath::RandBool()) ? EAIBoatIndex::AI1 : EAIBoatIndex::AI2;
 
-	// 随机选择一个技能
-	int32 RandomIndex = FMath::RandRange(0, AIAvailableSkills.Num() - 1);
-	ESkillType SelectedSkill = AIAvailableSkills[RandomIndex];
+	// 获取该 AI 的装备技能列表
+	const TArray<ESkillType>& AvailableSkills = 
+		(CasterAI == EAIBoatIndex::AI1) ? AI1_EquippedSkills : AI2_EquippedSkills;
+
+	// 如果没有可用技能，直接返回
+	if (AvailableSkills.Num() == 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("TriggerAISkill: %s has no equipped skills!"),
+			(CasterAI == EAIBoatIndex::AI1) ? TEXT("AI1") : TEXT("AI2"));
+		ScheduleNextAISkill();
+		return;
+	}
+
+	// 随机选择一个技能槽
+	int32 SlotIndex = FMath::RandRange(0, AvailableSkills.Num() - 1);
+	ESkillType SelectedSkill = AvailableSkills[SlotIndex];
 
 	// 获取技能配置
 	FSkillConfig* Config = SkillConfigs.Find(SelectedSkill);
@@ -1049,9 +1074,9 @@ void ADatamanagement::TriggerAISkill()
 		TargetAI = CasterAI;
 		bTargetIsPlayer = false;
 
-		UE_LOG(LogTemp, Log, TEXT("TriggerAISkill: %s casts %d (BUFF) on SELF! Duration=%.2f"),
+		UE_LOG(LogTemp, Log, TEXT("TriggerAISkill: %s casts Slot %d [%d] (BUFF) on SELF! Duration=%.2f"),
 			(CasterAI == EAIBoatIndex::AI1) ? TEXT("AI1") : TEXT("AI2"),
-			(int32)SelectedSkill, Config->Duration);
+			SlotIndex, (int32)SelectedSkill, Config->Duration);
 	}
 	else
 	{
@@ -1061,18 +1086,18 @@ void ADatamanagement::TriggerAISkill()
 
 		if (bTargetIsPlayer)
 		{
-			UE_LOG(LogTemp, Log, TEXT("TriggerAISkill: %s casts %d (DEBUFF) on PLAYER! Duration=%.2f"),
+			UE_LOG(LogTemp, Log, TEXT("TriggerAISkill: %s casts Slot %d [%d] (DEBUFF) on PLAYER! Duration=%.2f"),
 				(CasterAI == EAIBoatIndex::AI1) ? TEXT("AI1") : TEXT("AI2"),
-				(int32)SelectedSkill, Config->Duration);
+				SlotIndex, (int32)SelectedSkill, Config->Duration);
 		}
 		else
 		{
 			// 攻击另一个AI
 			TargetAI = (CasterAI == EAIBoatIndex::AI1) ? EAIBoatIndex::AI2 : EAIBoatIndex::AI1;
 
-			UE_LOG(LogTemp, Log, TEXT("TriggerAISkill: %s casts %d (DEBUFF) on %s! Duration=%.2f"),
+			UE_LOG(LogTemp, Log, TEXT("TriggerAISkill: %s casts Slot %d [%d] (DEBUFF) on %s! Duration=%.2f"),
 				(CasterAI == EAIBoatIndex::AI1) ? TEXT("AI1") : TEXT("AI2"),
-				(int32)SelectedSkill,
+				SlotIndex, (int32)SelectedSkill,
 				(TargetAI == EAIBoatIndex::AI1) ? TEXT("AI1") : TEXT("AI2"),
 				Config->Duration);
 		}
@@ -1117,5 +1142,71 @@ ESkillTargetType ADatamanagement::GetSkillTargetType(ESkillType SkillType) const
 	// 默认返回减益技能（攻击敌人）
 	UE_LOG(LogTemp, Warning, TEXT("GetSkillTargetType: Skill %d not found in map, defaulting to Enemy"), (int32)SkillType);
 	return ESkillTargetType::Enemy;
+}
+
+void ADatamanagement::RandomizeAISkills()
+{
+	// 所有可用技能类型
+	TArray<ESkillType> AllSkills = {
+		ESkillType::EastWind,
+		ESkillType::FloodSeven,
+		ESkillType::HeavyFog,
+		ESkillType::IronChain,
+		ESkillType::EmptyCity
+	};
+
+	// 为 AI1 随机选择 2 个不重复的技能
+	TArray<ESkillType> AI1_RandomSkills = AllSkills;
+	
+	int32 AI1_Slot0_Index = FMath::RandRange(0, AI1_RandomSkills.Num() - 1);
+	AI1_EquippedSkills[0] = AI1_RandomSkills[AI1_Slot0_Index];
+	AI1_RandomSkills.RemoveAt(AI1_Slot0_Index);  // 移除已选技能，避免重复
+	
+	int32 AI1_Slot1_Index = FMath::RandRange(0, AI1_RandomSkills.Num() - 1);
+	AI1_EquippedSkills[1] = AI1_RandomSkills[AI1_Slot1_Index];
+
+	// 为 AI2 随机选择 2 个不重复的技能
+	TArray<ESkillType> AI2_RandomSkills = AllSkills;
+	
+	int32 AI2_Slot0_Index = FMath::RandRange(0, AI2_RandomSkills.Num() - 1);
+	AI2_EquippedSkills[0] = AI2_RandomSkills[AI2_Slot0_Index];
+	AI2_RandomSkills.RemoveAt(AI2_Slot0_Index);
+	
+	int32 AI2_Slot1_Index = FMath::RandRange(0, AI2_RandomSkills.Num() - 1);
+	AI2_EquippedSkills[1] = AI2_RandomSkills[AI2_Slot1_Index];
+
+	UE_LOG(LogTemp, Log, TEXT("RandomizeAISkills: AI skills randomized for this race!"));
+}
+
+// ========================================
+// 难度系统
+// ========================================
+
+void ADatamanagement::ApplySpecialAreas(const TArray<int32>& Indices, const TArray<ESlotEffectType>& Types)
+{
+	// 清空所有特殊格子
+	SpecialAreaGrid.Init(ESlotEffectType::None, GridSize * GridSize);
+
+	// 应用新配置
+	for (int32 i = 0; i < Indices.Num(); i++)
+	{
+		if (Types.IsValidIndex(i) && Indices[i] >= 0 && Indices[i] < SpecialAreaGrid.Num())
+		{
+			SpecialAreaGrid[Indices[i]] = Types[i];
+		}
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("ApplySpecialAreas: Applied %d special areas"), Indices.Num());
+
+	// 通知 UI 刷新特殊格子显示
+	OnSpecialAreasUpdated();
+}
+
+void ADatamanagement::SetAISkillInterval(float MinInterval, float MaxInterval)
+{
+	AISkillIntervalMin = MinInterval;
+	AISkillIntervalMax = MaxInterval;
+
+	UE_LOG(LogTemp, Log, TEXT("SetAISkillInterval: Set to %.1f-%.1f seconds"), MinInterval, MaxInterval);
 }
 
