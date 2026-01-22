@@ -440,8 +440,8 @@ void ADragonBoatGameMode::InitializeDefaultDifficultyConfigs()
 	NormalConfig.AISkillIntervalMin = 12.0f;
 	NormalConfig.AISkillIntervalMax = 20.0f;
 
-	EasyConfig.SpecialAreaIndices = {15,16,22,23,29,30,17,24,31,18,19,25,26,32,33};
-	EasyConfig.SpecialAreaTypes = {
+	NormalConfig.SpecialAreaIndices = {15,16,22,23,29,30,17,24,31,18,19,25,26,32,33};
+	NormalConfig.SpecialAreaTypes = {
 		ESlotEffectType::SpeedUpSelf,
 		ESlotEffectType::SpeedUpSelf,
 		ESlotEffectType::SpeedUpSelf,
@@ -465,8 +465,8 @@ void ADragonBoatGameMode::InitializeDefaultDifficultyConfigs()
 	HardConfig.AISkillIntervalMin = 10.0f;
 	HardConfig.AISkillIntervalMax = 18.0f;
 
-	EasyConfig.SpecialAreaIndices = { 15,22,29,24,19,26,33 };
-	EasyConfig.SpecialAreaTypes = {
+	HardConfig.SpecialAreaIndices = { 15,22,29,24,19,26,33 };
+	HardConfig.SpecialAreaTypes = {
 		ESlotEffectType::SpeedUpSelf,
 		ESlotEffectType::SpeedUpSelf,
 		ESlotEffectType::SpeedUpSelf,
@@ -483,8 +483,8 @@ void ADragonBoatGameMode::InitializeDefaultDifficultyConfigs()
 	InsaneConfig.AISkillIntervalMin = 8.0f;
 	InsaneConfig.AISkillIntervalMax = 13.0f;
 
-	EasyConfig.SpecialAreaIndices = { 15,29,17,31,19,33 };
-	EasyConfig.SpecialAreaTypes = {
+	InsaneConfig.SpecialAreaIndices = { 15,29,17,31,19,33 };
+	InsaneConfig.SpecialAreaTypes = {
 		ESlotEffectType::SpeedUpSelf,
 		ESlotEffectType::SpeedUpSelf,
 		ESlotEffectType::MoraleBoost,

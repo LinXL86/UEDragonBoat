@@ -17,6 +17,7 @@
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="HighlightingSettingsPerFile">
+    <setting file="file://D:/UE5/UE_5.4/Engine/Source/Runtime/Engine/Private/GameplayStatics.cpp" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://D:/UE5/UE_5.4/Engine/Source/Runtime/UMG/Public/Blueprint/UserWidget.h" root0="FORCE_HIGHLIGHTING" />
   </component>
   <component name="ProjectColorInfo">{
@@ -170,6 +171,8 @@
       <workItem from="1768974373181" duration="738000" />
       <workItem from="1768987040394" duration="1000" />
       <workItem from="1768990202036" duration="154000" />
+      <workItem from="1769058910252" duration="1536000" />
+      <workItem from="1769080768893" duration="10000" />
     </task>
     <servers />
   </component>
