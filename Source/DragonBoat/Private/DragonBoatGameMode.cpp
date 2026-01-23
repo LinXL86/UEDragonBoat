@@ -483,7 +483,7 @@ void ADragonBoatGameMode::InitializeDefaultDifficultyConfigs()
 	InsaneConfig.AISkillIntervalMin = 8.0f;
 	InsaneConfig.AISkillIntervalMax = 13.0f;
 
-	InsaneConfig.SpecialAreaIndices = { 15,29,17,31,19,33 };
+	InsaneConfig.SpecialAreaIndices = { 15,29,24,19,33 };
 	InsaneConfig.SpecialAreaTypes = {
 		ESlotEffectType::SpeedUpSelf,
 		ESlotEffectType::SpeedUpSelf,
